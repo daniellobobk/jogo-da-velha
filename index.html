@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Jogo da Velha</title>
+  <style>
+    body {
+      background-color: #222;
+      font-family: Arial, sans-serif;
+      color: #FFF;
+    }
+
+    h1 {
+      text-align: center;
+      font-size: 48px;
+      margin-top: 30px;
+      text-transform: uppercase;
+    }
+
+    .board {
+      margin: 0 auto;
+      text-align: center;
+      padding: 20px;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      grid-gap: 10px;
+      max-width: 360px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .cell {
+      position: relative;
+      width: 100px;
+      height: 100px;
+      border: 2px solid #444;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 50px;
+      cursor: pointer;
+    }
+
+    .cell::before {
+      content: "";
+      position: absolute;
+      top: 50%;
+      left: -50%;
+      width: 200%;
+      height: 4px;
+      background-color: #FFD700;
+      transform-origin: top left;
+      transform: rotate(45deg) scaleY(0);
+      transition: transform 0.3s;
+      pointer-events: none;
+      z-index: -1;
+    }
+
+    .red {
+      color: red;
+    }
+
+    .blue {
+      color: blue;
+    }
+
+    .cell.winner {
+      z-index: 2;
+    }
+
+    .message {
+      margin-top: 40px;
+      font-size: 24px;
+      text-align: center;
+      position: relative;
+    }
+
+    .winner-badge {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background-color: #FFD700;
+      color: #222;
+      font-size: 32px;
+      padding: 20px 40px;
+      border-radius: 10px;
+      text-transform: uppercase;
+      font-weight: bold;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+      display: none;
+      z-index: 2;
+    }
+
+   @keyframes blink {
+  0% { opacity: 1; }
+  50% { opacity: 0.1; }
+  100% { opacity: 1; }
+}
+
+.cell.winner {
+  animation: blink 1s infinite;
+  box-shadow: 0 0 10px 5px rgba(255, 255, 0, 0.8);
+}
+@keyframes neon-glow {
+  0% {
+    box-shadow: 0 0 1px #fff, 0 0 2px #fff, 0 0 3px #fff, 0 0 4px #00c6ff, 0 0 7px #00c6ff, 0 0 8px #00c6ff, 0 0 10px #00c6ff, 0 0 15px #00c6ff;
+  }
+  100% {
+    box-shadow: 0 0 0.5px #fff, 0 0 1px #fff, 0 0 1.5px #fff, 0 0 2px #00c6ff, 0 0 3.5px #00c6ff, 0 0 4px #00c6ff, 0 0 5px #00c6ff, 0 0 7.5px #00c6ff;
+  }
+}
+
+.cell {
+  animation: neon-glow 1s ease-in-out infinite alternate;
+}
+
+
+
+    .reset-button {
+      display: block;
+      margin: 20px auto;
+      background-color: #FFD700;
+      color: #222;
+      font-size: 18px;
+      padding: 10px 20px;
+      border-radius: 4px;
+      text-transform: uppercase;
+      font-weight: bold;
+      cursor: pointer;
+      transition: background-color 0.3s;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    }
+
+    .reset-button:hover {
+      background-color: #F8CA00;
+    }
+
+    .scoreboard {
+      margin-top: 20px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 18px;
+    }
+
+    .scoreboard span {
+      margin: 0 10px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Jogo da Velha</h1>
+
+  <div class="board">
+    <div class="cell"></div>
+    <div class="cell"></div>
+    <div class="cell"></div>
+    <div class="cell"></div>
+    <div class="cell"></div>
+    <div class="cell"></div>
+    <div class="cell"></div>
+    <div class="cell"></div>
+    <div class="cell"></div>
+  </div>
+  <div class="message"></div>
+  <div class="winner-badge"></div>
+  <button class="reset-button">Reset</button>
+  <div class="scoreboard">
+    <span>X: <span id="x-score">0</span></span>
+    <span>O: <span id="o-score">0</span></span>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const board = Array.from(document.getElementsByClassName('cell'));
+      const message = document.querySelector('.message');
+      const winnerBadge = document.querySelector('.winner-badge');
+      const resetButton = document.querySelector('.reset-button');
+      const xScore = document.getElementById('x-score');
+      const oScore = document.getElementById('o-score');
+      let currentPlayer = 'X';
+      let moves = 0;
+      const winningCombinations = [
+        [0, 1, 2],
+        [3, 4, 5],
+        [6, 7, 8],
+        [0, 3, 6],
+        [1, 4, 7],
+        [2, 5, 8],
+        [0, 4, 8],
+        [2, 4, 6]
+      ];
+
+      board.forEach(cell => cell.addEventListener('click', handleClick));
+      resetButton.addEventListener('click', resetGame);
+
+      function handleClick(event) {
+        const clickedCell = event.target;
+
+        if (clickedCell.textContent === '') {
+          clickedCell.textContent = currentPlayer;
+          clickedCell.classList.add(currentPlayer === 'X' ? 'red' : 'blue');
+          moves++;
+
+          if (checkWin(currentPlayer)) {
+            message.textContent = currentPlayer + ' ganhou!';
+            board.forEach(cell => cell.removeEventListener('click', handleClick));
+            showWinnerBadge(currentPlayer);
+            highlightWinnerCells(currentPlayer);
+            updateScore(currentPlayer);
+          } else if (moves === 9) {
+            message.textContent = 'Empate!';
+            updateScore('draw');
+          } else {
+            currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
+          }
+        }
+      }
+
+      function checkWin(player) {
+        return winningCombinations.some(combination => {
+          return combination.every(index => {
+            return board[index].textContent === player;
+          });
+        });
+      }
+
+      function showWinnerBadge(player) {
+        winnerBadge.textContent = player + ' ganhou!';
+        winnerBadge.style.display = 'block';
+      }
+
+      function highlightWinnerCells(player) {
+        let winningCombination = getWinningCombination(player);
+
+        if (winningCombination) {
+          let [a, b, c] = winningCombination;
+          let cellA = board[a];
+          let cellB = board[b];
+          let cellC = board[c];
+
+          cellA.classList.add('winner');
+          cellB.classList.add('winner');
+          cellC.classList.add('winner');
+        }
+      }
+
+      function getWinningCombination(player) {
+        return winningCombinations.find(combination => {
+          return combination.every(index => {
+            return board[index].textContent === player;
+          });
+        });
+      }
+
+      function updateScore(player) {
+        if (player === 'draw') {
+          return;
+        }
+
+        let scoreElement = player === 'X' ? xScore : oScore;
+        scoreElement.textContent = parseInt(scoreElement.textContent)      + 1;
+      }
+
+      function resetGame() {
+        currentPlayer = 'X';
+        moves = 0;
+        board.forEach(cell => {
+          cell.textContent = '';
+          cell.classList.remove('red', 'blue', 'winner');
+        });
+        message.textContent = '';
+        winnerBadge.style.display = 'none';
+        board.forEach(cell => cell.addEventListener('click', handleClick));
+      }
+    });
+  </script>
+</body>
+</html>
+
+
